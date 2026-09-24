@@ -1,0 +1,179 @@
+# Environment.yaml - Build and Development Setup for Mavin AI
+
+initialize:
+  # One-time setup commands for the development environment
+  - run: |
+      # Ensure .NET SDK is installed
+      dotnet --version
+      
+      # Restore NuGet packages for all projects
+      dotnet restore
+      
+      # Build the solution to verify everything compiles
+      dotnet build --configuration Release
+
+maintenance:
+  # Commands that run on every session start to ensure environment is ready
+  - run: |
+      # Restore dependencies (may have changed)
+      dotnet restore
+      
+      # Quick build check
+      dotnet build --configuration Debug --no-restore
+
+knowledge:
+  # Build commands
+  - name: build
+    contents: |
+      # Full build of the solution
+      dotnet build
+      
+      # Build specific project
+      dotnet build CoreMVCClean/Core.MVC.Clean.csproj
+      dotnet build CoreLibraryCleanAdditionalService/Core.Library.Clean.AdditionalService.csproj
+      
+      # Build with specific configuration
+      dotnet build --configuration Release
+      dotnet build --configuration Debug
+      
+      # Clean build
+      dotnet clean && dotnet build
+
+  # Run commands
+  - name: run
+    contents: |
+      # Run the main web application
+      dotnet run --project CoreMVCClean/Core.MVC.Clean.csproj
+      
+      # Run with specific environment
+      dotnet run --project CoreMVCClean/Core.MVC.Clean.csproj --environment Development
+      
+      # Run with specific port
+      dotnet run --project CoreMVCClean/Core.MVC.Clean.csproj --urls "http://localhost:5000"
+
+  # Test commands (when tests are added)
+  - name: test
+    contents: |
+      # Run all tests (when test projects are added)
+      dotnet test
+      
+      # Run tests with specific configuration
+      dotnet test --configuration Release
+      
+      # Run tests with detailed output
+      dotnet test --logger "console;verbosity=detailed"
+
+  # Package management
+  - name: packages
+    contents: |
+      # List all packages
+      dotnet list package
+      
+      # List packages for specific project
+      dotnet list CoreMVCClean/Core.MVC.Clean.csproj package
+      dotnet list CoreLibraryCleanAdditionalService/Core.Library.Clean.AdditionalService.csproj package
+      
+      # Add a new package
+      dotnet add CoreMVCClean/Core.MVC.Clean.csproj package <PackageName>
+      dotnet add CoreLibraryCleanAdditionalService/Core.Library.Clean.AdditionalService.csproj package <PackageName>
+      
+      # Remove a package
+      dotnet remove CoreMVCClean/Core.MVC.Clean.csproj package <PackageName>
+      
+      # Update packages
+      dotnet add CoreMVCClean/Core.MVC.Clean.csproj package <PackageName> --version <Version>
+
+  # Dependency management
+  - name: dependencies
+    contents: |
+      # Check for outdated packages
+      dotnet list package --outdated
+      
+      # Restore all packages
+      dotnet restore
+      
+      # Restore specific project
+      dotnet restore CoreMVCClean/Core.MVC.Clean.csproj
+
+  # Code quality and analysis
+  - name: analyze
+    contents: |
+      # Enable analyzers (if not already enabled)
+      # Add package: Microsoft.CodeAnalysis.Analyzers
+      
+      # Run analyzers during build
+      dotnet build --configuration Release
+      
+      # Check for potential issues
+      dotnet format --verify-no-changes
+
+  # Startup verification
+  - name: startup
+    contents: |
+      # Verify the application can start
+      dotnet build CoreMVCClean/Core.MVC.Clean.csproj
+      
+      # Check configuration files
+      # Verify appsettings.json exists and is valid
+      # Verify appsettings.Development.json exists
+      
+      # Verify database setup (when SQLite is implemented)
+      # Check database connection strings
+      # Verify database migrations
+
+  # Debugging
+  - name: debug
+    contents: |
+      # Build with debug symbols
+      dotnet build --configuration Debug
+      
+      # Run in debug mode
+      dotnet run --project CoreMVCClean/Core.MVC.Clean.csproj --configuration Debug
+      
+      # Attach debugger
+      # Use your IDE's debugging capabilities
+
+  # Cleanup
+  - name: cleanup
+    contents: |
+      # Clean build artifacts
+      dotnet clean
+      
+      # Clean specific project
+      dotnet clean CoreMVCClean/Core.MVC.Clean.csproj
+      
+      # Remove bin and obj folders
+      # Can be done manually or with: dotnet clean
+
+  # Project information
+  - name: info
+    contents: |
+      # Show solution information
+      dotnet sln CoreMVCClean.slnx list
+      
+      # Show project information
+      dotnet build CoreMVCClean/Core.MVC.Clean.csproj --verbosity minimal
+      dotnet build CoreLibraryCleanAdditionalService/Core.Library.Clean.AdditionalService.csproj --verbosity minimal
+      
+      # Check .NET SDK version
+      dotnet --info
+
+  # Common workflows
+  - name: workflow
+    contents: |
+      # Typical development workflow:
+      # 1. Make code changes
+      # 2. Build: dotnet build
+      # 3. Test: dotnet test (when tests exist)
+      # 4. Run: dotnet run --project CoreMVCClean/Core.MVC.Clean.csproj
+      # 5. Verify functionality through web interface
+      
+      # Adding a new entity workflow:
+      # 1. Create model in CoreLibraryCleanAdditionalService/Models/
+      # 2. Create DTOs in CoreLibraryCleanAdditionalService/Models/
+      # 3. Create Director in CoreLibraryCleanAdditionalService/Director/
+      # 4. Create Controller in CoreMVCClean/Controllers/
+      # 5. Register services in CoreMVCClean/Code/DependencyInjection.cs
+      # 6. Add configuration in appsettings.json
+      # 7. Create Views in CoreMVCClean/Views/
+      # 8. Build and test: dotnet build && dotnet run
