@@ -186,3 +186,6 @@ All entities implement `IEntityDirector<TEntity, TCreate>` with:
 - External API integration is partially implemented
 - Maintain backward compatibility when possible
 - Follow .NET best practices and patterns
+
+## Enhancement Specifications
+- **API Standardization**: See `api-standardization-requirements.md` for detailed requirements on adapting to new API response models with standardized success/error handling, correlation IDs, and structured error codes

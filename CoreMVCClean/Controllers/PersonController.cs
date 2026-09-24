@@ -14,28 +14,28 @@ namespace Core.MVC.Clean.Controllers
 
         public async Task<IActionResult> Index(string? search)
         {
-            var result = DatabaseInitializerPerson.GetPersons();
+            // var result = DatabaseInitializerPerson.GetPersons();
+
+            // if (!string.IsNullOrWhiteSpace(search))
+            // {
+            //     result = result.Where(x => x.firstName.Equals(search)).ToList();
+            // }
+
+            // return View(result.Select(DatabaseInitializerPerson.PersonToPersonDTO));
+
+
+            IEnumerable<PersonDTO> result = null;
 
             if (!string.IsNullOrWhiteSpace(search))
             {
-                result = result.Where(x => x.firstName.Equals(search)).ToList();
+               search = $"?search={Uri.EscapeDataString(search)}";
+
+               result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
+               return View(result);
             }
 
-            return View(result.Select(DatabaseInitializerPerson.PersonToPersonDTO));
-
-
-            //IEnumerable<PersonDTO> result = null;
-
-            //if (!string.IsNullOrWhiteSpace(search))
-            //{
-            //    search = $"?search={Uri.EscapeDataString(search)}";
-
-            //    result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
-            //    return View(result);
-            //}
-
-            //result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(true);
-            //return View(result);
+            result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(true);
+            return View(result);
         }
 
         public async Task<ActionResult> Edit(string personId)

@@ -244,6 +244,7 @@ Services are registered in `DependencyInjection.cs`:
 - 📋 API documentation (Swagger/OpenAPI)
 - 📋 Performance optimization
 - 📋 Advanced logging and monitoring
+- 📋 API response model standardization (see `api-standardization-requirements.md`)
 
 ## Data Flow
 
@@ -358,6 +359,18 @@ Services are registered in `DependencyInjection.cs`:
 - Use environment-specific configurations
 
 ## Future Enhancement Roadmap
+
+### API Standardization (Priority Enhancement)
+**Reference**: See `api-standardization-requirements.md` for detailed requirements
+
+The application needs to adapt to standardized API response models with:
+- Wrapped success responses (`ApiResponse<T>`)
+- Structured error responses (`ApiErrorResponse`)
+- Correlation ID tracking for request tracing
+- Standardized error codes
+- Enhanced error handling and logging
+
+**Impact**: This enhancement will require changes to Models, Directors, Controllers, and Infrastructure layers while maintaining backward compatibility.
 
 ### Phase 1: Database Migration
 - Replace in-memory lists with SQLite
