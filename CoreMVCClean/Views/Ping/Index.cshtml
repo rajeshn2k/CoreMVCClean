@@ -1,0 +1,13 @@
+﻿@model IDictionary<string, string>
+<div class="row">
+    <div>
+        <h4>Ping - Runtime Environment</h4>
+        <hr />
+        @foreach (var item in Model)
+        {
+            <p>
+                <strong>@item.Key</strong> - @item.Value
+            </p>
+        }
+    </div>
+</div>

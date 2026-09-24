@@ -1,0 +1,74 @@
+﻿@model Core.Library.Clean.AdditionalService.BookCreateDTO
+
+<div class="row">
+    <div class="col-md-8">
+        <form asp-action="Create">
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            @* <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="personId" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="personId" class="form-control" />
+                    <span asp-validation-for="personId" class="text-danger"></span>
+                </div>
+            </div> *@
+
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="bookCategory" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="bookCategory" class="form-control" />
+                    <span asp-validation-for="bookCategory" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="bookName" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="bookName" class="form-control" />
+                    <span asp-validation-for="bookName" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="edition" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="edition" class="form-control" />
+                    <span asp-validation-for="edition" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="image" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="image" class="form-control" />
+                    <span asp-validation-for="image" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group row">
+                <div class="col-sm-4">
+                    <label asp-for="price" class="control-label"></label>
+                </div>
+                <div class="col-sm-8">
+                    <input asp-for="price" class="form-control" />
+                    <span asp-validation-for="price" class="text-danger"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <input type="submit" value="Create" class="btn btn-success" />
+                <a asp-action="Index" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+</div>

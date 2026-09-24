@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/Solution Items/">
+    <File Path="NOTES/Git.txt" />
+    <File Path="NOTES/Packages.txt" />
+  </Folder>
+  <Project Path="CoreLibraryCleanAdditionalService/Core.Library.Clean.AdditionalService.csproj" />
+  <Project Path="CoreMVCClean/Core.MVC.Clean.csproj" />
+</Solution>
