@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Library.Clean.AdditionalService
 {
     public class BookDirector : BaseDirector, IEntityDirector<BookDTO, BookCreateDTO>
     {
-        public BookDirector(HttpClient _httpClient, IHttpContextAccessor _httpContextAccessor) : base(_httpClient, _httpContextAccessor)
+        public BookDirector(
+            HttpClient _httpClient, 
+            IHttpContextAccessor _httpContextAccessor,
+            ILogger<BookDirector> logger) 
+            : base(_httpClient, _httpContextAccessor, logger)
         {
             Console.WriteLine(httpClient.BaseAddress);
         }

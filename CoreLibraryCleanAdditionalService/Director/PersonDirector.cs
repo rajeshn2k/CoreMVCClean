@@ -1,10 +1,15 @@
 ﻿using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging;
 
 namespace Core.Library.Clean.AdditionalService
 {
     public class PersonDirector : BaseDirector, IEntityDirector<PersonDTO, PersonCreateDTO>
     {
-        public PersonDirector(HttpClient _httpClient, IHttpContextAccessor _httpContextAccessor) : base(_httpClient, _httpContextAccessor)
+        public PersonDirector(
+            HttpClient _httpClient, 
+            IHttpContextAccessor _httpContextAccessor,
+            ILogger<PersonDirector> logger) 
+            : base(_httpClient, _httpContextAccessor, logger)
         {
             Console.WriteLine(httpClient.BaseAddress);
         }

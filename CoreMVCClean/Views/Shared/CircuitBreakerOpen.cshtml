@@ -1,0 +1,23 @@
+@model ErrorViewModel
+
+@{
+    ViewData["Title"] = "Service Unavailable";
+}
+
+<div class="container mt-5">
+    <div class="alert alert-warning" role="alert">
+        <h4 class="alert-heading">⚠️ Service Temporarily Unavailable</h4>
+        <p>@Model.Message</p>
+        <hr>
+        @if (!string.IsNullOrEmpty(Model.RequestId))
+        {
+            <p class="mb-0">Request ID: @Model.RequestId</p>
+        }
+    </div>
+
+    <div class="text-center mt-4">
+        <p>The service is experiencing issues and the circuit breaker has been activated to protect the system.</p>
+        <p>Please try again in a few moments.</p>
+        <a href="@Url.Action("Index", "Home")" class="btn btn-primary">Return to Home</a>
+    </div>
+</div>
