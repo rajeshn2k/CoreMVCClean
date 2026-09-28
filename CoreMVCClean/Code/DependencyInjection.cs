@@ -25,11 +25,13 @@ namespace Core.MVC.Clean
             services.AddHttpClient<BookDirector>(client =>
             {
                 client.BaseAddress = new Uri(bookAPIUrl);
+                client.Timeout = TimeSpan.FromMinutes(5);
             });
 
             services.AddHttpClient<PersonDirector>(client =>
             {
                 client.BaseAddress = new Uri(personAPIUrl);
+                client.Timeout = TimeSpan.FromMinutes(5);
             });
 
             return services;

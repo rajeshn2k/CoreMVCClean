@@ -15,102 +15,39 @@ namespace Core.MVC.Clean.Controllers
 
         public async Task<IActionResult> Index(string? search)
         {
-            try
+            IEnumerable<BookDTO> result = null;
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                IEnumerable<BookDTO> result = null;
+                search = $"?search={Uri.EscapeDataString(search)}";
 
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                   search = $"?search={Uri.EscapeDataString(search)}";
-
-                   result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
-                   return View(result);
-                }
-
-                result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
+                result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
                 return View(result);
             }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+
+            result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
+            return View(result);
         }
 
         public async Task<ActionResult> Edit(string bookId)
         {
-            try
-            {
-                BookDTO book = await apiClient.GetEntityByIdAsync(bookId, default).ConfigureAwait(false);
-                return View(book);
-            }
-            catch (ApiException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+            BookDTO book = await apiClient.GetEntityByIdAsync(bookId, default).ConfigureAwait(false);
+            return View(book);
         }
 
         [HttpPost]
         public async Task<ActionResult> Edit(string id, [FromForm] BookDTO book)
         {
-            try
-            {
-                await apiClient.UpdateEntityByIdAsync(id, book, default).ConfigureAwait(false);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (ApiException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+            await apiClient.UpdateEntityByIdAsync(id, book, default).ConfigureAwait(false);
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string bookId)
         {
-            try
-            {
-                await apiClient.DeleteEntityByIdAsync(bookId, default).ConfigureAwait(true);
-                return RedirectToAction("Index");
-            }
-            catch (ApiException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+            await apiClient.DeleteEntityByIdAsync(bookId, default).ConfigureAwait(true);
+            return RedirectToAction("Index");
         }
 
 
@@ -130,24 +67,8 @@ namespace Core.MVC.Clean.Controllers
                 return View(book);
             }
 
-            try
-            {
-                await apiClient.CreateEntityAsync(book, default).ConfigureAwait(false);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (ApiException ex)
-            {
-                ModelState.AddModelError(string.Empty, ex.Message);
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+            await apiClient.CreateEntityAsync(book, default).ConfigureAwait(false);
+            return RedirectToAction(nameof(Index));
         }
     }
 }

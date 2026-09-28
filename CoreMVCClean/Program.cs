@@ -1,4 +1,3 @@
-using Core.MVC.Clean;
 using Serilog;
 
 namespace Core.MVC.Clean

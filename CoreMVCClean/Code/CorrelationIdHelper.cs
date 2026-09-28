@@ -12,10 +12,10 @@ namespace Core.MVC.Clean
         /// <summary>
         /// Gets the correlation ID from current HttpContext
         /// </summary>
-        public static string GetCorrelationId(HttpContext context)
-        {
-            return context.Items[CorrelationIdItemKey]?.ToString();
-        }
+        //public static string GetCorrelationId(HttpContext context)
+        //{
+        //    return context.Items[CorrelationIdItemKey]?.ToString();
+        //}
 
         /// <summary>
         /// Gets the correlation ID from current HttpContext (extension method)
