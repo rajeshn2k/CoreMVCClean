@@ -92,7 +92,7 @@ namespace Core.Library.Clean.AdditionalService.Resilience
                     retryCount: maxRetries,
                     sleepDurationProvider: retryAttempt => 
                         exponentialBackoff 
-                            ? TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) * retryDelay
+                            ? TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)) * retryDelay.Ticks
                             : retryDelay,
                     onRetry: (outcome, timeSpan, retryCount, context) =>
                     {
