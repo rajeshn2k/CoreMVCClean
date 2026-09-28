@@ -3,6 +3,8 @@
 ## Overview
 This specification captures the requirements for adapting the CoreMVCClean application to support standardized API response models. The application needs to transition from direct entity responses to wrapped response structures that include success/error metadata, correlation tracking, and standardized error handling.
 
+**Important Note**: These requirements assume that external API integration will be completed first. The current in-memory implementation will be replaced with HTTP-based external API calls before implementing these standardization requirements.
+
 ## Current State Analysis
 
 ### Existing Response Patterns
@@ -272,44 +274,92 @@ Controller → Director → External API → Director → Controller → View
                      (ApiErrorResponse) (Handle Error)    (Error Display)
 ```
 
+## Implementation Strategy
+
+### Incremental Approach
+The API standardization will be implemented incrementally in 8 phases to ensure:
+- Each phase can be tested independently
+- Changes can be deployed incrementally
+- Rollback is easier if issues arise
+- Testing can be focused on specific components
+- Reduced risk of breaking existing functionality
+
+### Phase Dependencies
+- **Phase 1** (Models) → Foundation for all subsequent phases
+- **Phase 2** (Error Codes) → Independent, can be done in parallel with Phase 1
+- **Phase 3** (Director Success) → Depends on Phase 1
+- **Phase 4** (Director Error) → Depends on Phases 1, 2, 3
+- **Phase 5** (Correlation Infrastructure) → Independent, can be done in parallel with earlier phases
+- **Phase 6** (Director Correlation) → Depends on Phase 5
+- **Phase 7** (Controller Updates) → Depends on Phases 3, 4, 6
+- **Phase 8** (Error Integration) → Depends on all previous phases
+
+### Testing Strategy
+Each phase includes:
+- Unit tests for new components
+- Integration tests for modified components
+- Backward compatibility tests
+- Manual testing of affected functionality
+
 ## Implementation Requirements
 
-### Phase 1: Model Layer Updates
+### Phase 1: Model Layer Updates (Foundation)
 1. Create `ApiResponse<T>` model class
-2. Create `ApiErrorResponse` model class  
+2. Create `ApiErrorResponse` model class
 3. Create `ErrorDetail` model class
 4. Create `ErrorCodes` static class
 5. Add XML documentation for all new models
+6. Add unit tests for model serialization/deserialization
 
-### Phase 2: Director Layer Updates
+### Phase 2: Error Code Standardization (Basic Error Handling)
+1. Implement `ErrorCodes` static class with all error constants
+2. Update existing exception handling to use standardized error codes
+3. Add error code to exception messages
+4. Create error code mapping for user-friendly messages
+5. Test error code generation and mapping
+
+### Phase 3: Director Layer Response Wrapping (Success Responses)
 1. Update `BookDirector.HandleResponseAsync<T>()` to:
-   - Detect and unwrap `ApiResponse<T>` responses
-   - Handle `ApiErrorResponse` and convert to exceptions
-   - Extract correlation ID from response headers
-   - Update error messages with structured details
+   - Wrap successful responses in `ApiResponse<T>`
+   - Add basic timestamp and message to responses
+   - Maintain backward compatibility for unwrapped responses
 
 2. Update `PersonDirector.HandleResponseAsync<T>()` with same changes
 
-3. Add correlation ID propagation:
-   - Add `X-Correlation-ID` header to outgoing requests
-   - Extract correlation ID from current context
-   - Pass correlation ID through HTTP client calls
+3. Add helper methods:
+   - `WrapResponse<T>()` - Wrap successful responses
+   - `ExtractDataFromResponse<T>()` - Extract data from wrapped responses
+   - Support both wrapped and unwrapped response formats
 
-4. Add new helper methods:
-   - `ExtractDataFromResponse<T>()` - Extract data from wrapped response
-   - `HandleErrorResponse()` - Convert error response to exception
-   - `AddCorrelationIdHeader()` - Add correlation ID to requests
+4. Test Director methods with both response formats
 
-### Phase 3: Infrastructure Updates
+### Phase 4: Director Layer Error Handling (Error Responses)
+1. Update Directors to handle `ApiErrorResponse` from external APIs
+2. Convert `ApiErrorResponse` to structured exceptions
+3. Add error detail extraction from error responses
+4. Update error messages with structured details
+5. Add error response to exception conversion helper
+6. Test error handling with structured error responses
+
+### Phase 5: Correlation ID Infrastructure (Request Tracing)
 1. Create `CorrelationIdMiddleware` class
 2. Register middleware in `Program.cs` pipeline
-3. Update HTTP client configuration in `DependencyInjection.cs`
-4. Add correlation ID to HTTP client default headers
-5. Configure logging to include correlation IDs
+3. Implement correlation ID generation and propagation
+4. Update HTTP client configuration in `DependencyInjection.cs`
+5. Add correlation ID to HTTP client default headers
+6. Configure logging to include correlation IDs
+7. Test correlation ID propagation through request chain
 
-### Phase 4: Controller Updates
+### Phase 6: Director Layer Correlation Integration
+1. Update Directors to extract correlation ID from response headers
+2. Add correlation ID to wrapped responses
+3. Propagate correlation ID through HTTP client calls
+4. Add correlation ID to error responses
+5. Test correlation ID in Director layer
+
+### Phase 7: Controller Updates (Response Handling)
 1. Update `BookController` actions:
-   - Handle wrapped responses from Director
+   - Handle wrapped responses from Directors
    - Extract data for views
    - Handle structured errors
    - Pass correlation ID to views for logging
@@ -322,17 +372,20 @@ Controller → Director → External API → Director → Controller → View
    - Show correlation IDs for debugging
    - Maintain current UI functionality
 
-### Phase 5: Error Handling Updates
+4. Test controller actions with new response format
+
+### Phase 8: Error Handling Integration (Complete Error System)
 1. Update global exception handler to work with structured errors
 2. Add error logging with correlation IDs
 3. Update error views to display structured error information
-4. Add error code mappings for user-friendly messages
+4. Complete error code mappings for user-friendly messages
+5. Test complete error handling flow
 
 ## Backward Compatibility Requirements
 
 ### Transition Strategy
 1. **Graceful Degradation**: Directors should handle both old and new response formats during transition
-2. **Feature Flag**: Consider adding configuration flag to enable new response handling
+2. **Incremental Implementation**: Implement response models first, then error codes, then correlation IDs in phases
 3. **Testing**: Maintain existing functionality while implementing new format
 4. **Rollback**: Plan to revert changes if external API doesn't support new format yet
 
@@ -341,6 +394,7 @@ Controller → Director → External API → Director → Controller → View
 - Directors should detect response format and handle accordingly
 - Maintain existing exception types for compatibility
 - Views should work with both formats during transition
+- Each phase should be independently testable and deployable
 
 ## Testing Requirements
 
@@ -488,6 +542,7 @@ Controller → Director → External API → Director → Controller → View
 - Existing entity models (no changes required)
 - Existing Director interface (maintain compatibility)
 - Existing Controller actions (update implementation only)
+- **Note**: This work is separate from SQLite database migration - these concerns are intentionally separated
 
 ## Risks and Mitigations
 
@@ -508,13 +563,16 @@ Controller → Director → External API → Director → Controller → View
 
 ## Timeline Estimate
 
-- **Phase 1 (Models)**: 1-2 days
-- **Phase 2 (Directors)**: 2-3 days  
-- **Phase 3 (Infrastructure)**: 1-2 days
-- **Phase 4 (Controllers)**: 2-3 days
-- **Phase 5 (Testing)**: 2-3 days
-- **Phase 6 (Documentation)**: 1 day
-- **Total**: 9-14 days
+- **Phase 1 (Model Layer)**: 1-2 days
+- **Phase 2 (Error Codes)**: 1 day
+- **Phase 3 (Director Success Responses)**: 2-3 days
+- **Phase 4 (Director Error Handling)**: 2-3 days
+- **Phase 5 (Correlation Infrastructure)**: 1-2 days
+- **Phase 6 (Director Correlation Integration)**: 1-2 days
+- **Phase 7 (Controller Updates)**: 2-3 days
+- **Phase 8 (Error Handling Integration)**: 1-2 days
+- **Testing & Documentation**: 2-3 days
+- **Total**: 13-21 days
 
 ## Conclusion
 
@@ -522,6 +580,8 @@ This standardization will significantly improve the application's error handling
 
 ---
 
-**Document Status**: Requirements Complete  
-**Next Steps**: Implementation Planning  
-**Last Updated**: 2024-09-24
+**Document Status**: Requirements Complete (Updated for Incremental Implementation)
+**Implementation Status**: ✅ Fully Implemented (2026-09-27)
+**Last Updated**: 2026-09-27
+**Implementation Approach**: Incremental - 8 phases with independent testing and deployment
+**See Also**: `api-standardization-implementation-plan.md` for detailed implementation plan

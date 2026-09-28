@@ -1,3 +1,6 @@
+using Core.MVC.Clean;
+using Serilog;
+
 namespace Core.MVC.Clean
 {
     public class Program
@@ -5,6 +8,15 @@ namespace Core.MVC.Clean
         public static void Main(string[] args)
         {
             var builder = WebApplication.CreateBuilder(args);
+
+            // --------------------------------------------------
+            // Configure Serilog
+            // --------------------------------------------------
+            builder.Host.UseSerilog((context, services, configuration) => configuration
+                .ReadFrom.Configuration(context.Configuration)
+                .ReadFrom.Services(services)
+                .Enrich.FromLogContext()
+            );
 
             // --------------------------------------------------
             // Add services to the container.
@@ -23,7 +35,8 @@ namespace Core.MVC.Clean
             // so it can catch exceptions thrown by any middleware or controllers below it.
             // --------------------------------------------------
 
-            app.UseExceptionHandler("/Home/Error");
+            app.UseMiddleware<CorrelationIdMiddleware>();
+            app.UseMiddleware<GlobalExceptionHandler>();
 
             // Configure the HTTP request pipeline.
             if (!app.Environment.IsDevelopment())

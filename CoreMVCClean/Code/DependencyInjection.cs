@@ -9,7 +9,7 @@ namespace Core.MVC.Clean
             IConfiguration configuration)
         {
             services.AddSingleton(configuration);
-
+            services.AddHttpContextAccessor();
 
             // --------------------------------------------------
             // The URL is configured in appsettings.json

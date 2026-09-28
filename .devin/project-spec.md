@@ -229,6 +229,13 @@ Services are registered in `DependencyInjection.cs`:
 - ✅ Dependency injection setup
 - ✅ Error handling middleware
 - ✅ Security features (HTTPS, HSTS, Anti-forgery)
+- ✅ API response model standardization (completed 2026-09-27)
+  - Standardized success responses with `ApiResponse<T>`
+  - Structured error responses with `ApiErrorResponse`
+  - Correlation ID tracking for request tracing
+  - Standardized error codes and error mapping
+  - Enhanced logging with correlation ID support
+  - Backward compatibility maintained
 
 ### In Progress Features
 - 🔄 Migration from in-memory to SQLite database
@@ -244,7 +251,6 @@ Services are registered in `DependencyInjection.cs`:
 - 📋 API documentation (Swagger/OpenAPI)
 - 📋 Performance optimization
 - 📋 Advanced logging and monitoring
-- 📋 API response model standardization (see `api-standardization-requirements.md`)
 
 ## Data Flow
 
@@ -360,18 +366,6 @@ Services are registered in `DependencyInjection.cs`:
 
 ## Future Enhancement Roadmap
 
-### API Standardization (Priority Enhancement)
-**Reference**: See `api-standardization-requirements.md` for detailed requirements
-
-The application needs to adapt to standardized API response models with:
-- Wrapped success responses (`ApiResponse<T>`)
-- Structured error responses (`ApiErrorResponse`)
-- Correlation ID tracking for request tracing
-- Standardized error codes
-- Enhanced error handling and logging
-
-**Impact**: This enhancement will require changes to Models, Directors, Controllers, and Infrastructure layers while maintaining backward compatibility.
-
 ### Phase 1: Database Migration
 - Replace in-memory lists with SQLite
 - Implement Entity Framework Core
@@ -384,6 +378,7 @@ The application needs to adapt to standardized API response models with:
 - Implement proper error handling for HTTP calls
 - Add retry logic and circuit breakers
 - Implement request/response logging
+- Note: API response model standardization is completed (see AGENTS.md)
 
 ### Phase 3: Testing Infrastructure
 - Add unit test project
