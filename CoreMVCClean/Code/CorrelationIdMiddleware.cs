@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Http;
 using Serilog.Context;
 
 namespace Core.MVC.Clean
@@ -26,12 +25,15 @@ namespace Core.MVC.Clean
                 correlationId = Guid.NewGuid().ToString();
             }
 
+            //This puts correlation id in context early in the pipeline, so every downstream (ex:API) can access the ID.
+            //application should read this correlation id and pass it to downstream (ex:API)
             context.Items[CorrelationIdItemKey] = correlationId;
 
             using (LogContext.PushProperty("CorrelationId", correlationId))
             {
                 context.Response.OnStarting(() =>
                 {
+                    //When a response is rendered X-Correlation-ID also rendered as reference
                     context.Response.Headers[CorrelationIdHeader] = correlationId;
                     return Task.CompletedTask;
                 });

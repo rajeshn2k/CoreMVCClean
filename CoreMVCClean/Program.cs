@@ -25,6 +25,7 @@ namespace Core.MVC.Clean
             // --------------------------------------------------
             // Dependency Injection - Application Services
             // --------------------------------------------------
+
             builder.Services.AddApplicationServices(builder.Configuration);
 
             var app = builder.Build();
@@ -35,6 +36,10 @@ namespace Core.MVC.Clean
             // --------------------------------------------------
 
             app.UseMiddleware<CorrelationIdMiddleware>();
+
+            //DON'T DO THIS as GlobalExceptionHandler handles error and redirection
+            //app.UseExceptionHandler("/Home/Error");
+            
             app.UseMiddleware<GlobalExceptionHandler>();
 
             // Configure the HTTP request pipeline.

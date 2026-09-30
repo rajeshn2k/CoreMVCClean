@@ -1,5 +1,3 @@
-using Newtonsoft.Json;
-
 namespace Core.Library.Clean.AdditionalService
 {
     /// <summary>

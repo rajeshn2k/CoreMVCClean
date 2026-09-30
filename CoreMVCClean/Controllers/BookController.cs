@@ -1,7 +1,5 @@
 ﻿using Core.Library.Clean.AdditionalService;
-using Core.Library.Clean.AdditionalService.Resilience;
 using Microsoft.AspNetCore.Mvc;
-using Core.MVC.Clean;
 
 namespace Core.MVC.Clean.Controllers
 {
@@ -16,149 +14,40 @@ namespace Core.MVC.Clean.Controllers
 
         public async Task<IActionResult> Index(string? search)
         {
-            try
+            IEnumerable<BookDTO> result = null;
+
+            if (!string.IsNullOrWhiteSpace(search))
             {
-                IEnumerable<BookDTO> result = null;
+                search = $"?search={Uri.EscapeDataString(search)}";
 
-                if (!string.IsNullOrWhiteSpace(search))
-                {
-                    search = $"?search={Uri.EscapeDataString(search)}";
-
-                    result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
-                    return View(result);
-                }
-
-                result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
+                result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
                 return View(result);
             }
-            catch (CircuitBreakerOpenException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = "Book API is currently unavailable due to circuit breaker activation. Please try again later.",
-                    ErrorCode = ErrorCodes.EXTERNAL_API_UNAVAILABLE,
-                    StatusCode = 503
-                };
-                return View("CircuitBreakerOpen", errorViewModel);
-            }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View("Error", errorViewModel);
-            }
+
+            result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
+            return View(result);
         }
 
         public async Task<ActionResult> Edit(string bookId)
         {
-            try
-            {
-                BookDTO book = await apiClient.GetEntityByIdAsync(bookId, default).ConfigureAwait(false);
-                return View(book);
-            }
-            catch (CircuitBreakerOpenException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = "Book API is currently unavailable due to circuit breaker activation. Please try again later.",
-                    ErrorCode = ErrorCodes.EXTERNAL_API_UNAVAILABLE,
-                    StatusCode = 503
-                };
-                return View("CircuitBreakerOpen", errorViewModel);
-            }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return RedirectToAction(nameof(Index));
-            }
+            BookDTO book = await apiClient.GetEntityByIdAsync(bookId, default).ConfigureAwait(false);
+            return View(book);
         }
 
         [HttpPost]
         public async Task<ActionResult> Edit(string id, [FromForm] BookDTO book)
         {
-            try
-            {
-                await apiClient.UpdateEntityByIdAsync(id, book, default).ConfigureAwait(false);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (CircuitBreakerOpenException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = "Book API is currently unavailable due to circuit breaker activation. Please try again later.",
-                    ErrorCode = ErrorCodes.EXTERNAL_API_UNAVAILABLE,
-                    StatusCode = 503
-                };
-                return View("CircuitBreakerOpen", errorViewModel);
-            }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View(book);
-            }
+            await apiClient.UpdateEntityByIdAsync(id, book, default).ConfigureAwait(false);
+            return RedirectToAction(nameof(Index));
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> Delete(string bookId)
         {
-            try
-            {
-                await apiClient.DeleteEntityByIdAsync(bookId, default).ConfigureAwait(true);
-                return RedirectToAction("Index");
-            }
-            catch (CircuitBreakerOpenException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = "Book API is currently unavailable due to circuit breaker activation. Please try again later.",
-                    ErrorCode = ErrorCodes.EXTERNAL_API_UNAVAILABLE,
-                    StatusCode = 503
-                };
-                return View("CircuitBreakerOpen", errorViewModel);
-            }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return RedirectToAction(nameof(Index));
-            }
+            await apiClient.DeleteEntityByIdAsync(bookId, default).ConfigureAwait(true);
+            return RedirectToAction("Index");
         }
-
 
         // GET: Book/Create
         public ActionResult Create()
@@ -176,35 +65,8 @@ namespace Core.MVC.Clean.Controllers
                 return View(book);
             }
 
-            try
-            {
-                await apiClient.CreateEntityAsync(book, default).ConfigureAwait(false);
-                return RedirectToAction(nameof(Index));
-            }
-            catch (CircuitBreakerOpenException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = "Book API is currently unavailable due to circuit breaker activation. Please try again later.",
-                    ErrorCode = ErrorCodes.EXTERNAL_API_UNAVAILABLE,
-                    StatusCode = 503
-                };
-                return View("CircuitBreakerOpen", errorViewModel);
-            }
-            catch (ApiException ex)
-            {
-                var correlationId = HttpContext.GetCorrelationId();
-                var errorViewModel = new ErrorViewModel
-                {
-                    RequestId = correlationId,
-                    Message = ex.Message,
-                    ErrorCode = ex.ErrorCode,
-                    StatusCode = ex.StatusCode
-                };
-                return View(book);
-            }
+            await apiClient.CreateEntityAsync(book, default).ConfigureAwait(false);
+            return RedirectToAction(nameof(Index));
         }
     }
 }

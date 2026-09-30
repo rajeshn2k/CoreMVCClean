@@ -1,4 +1,4 @@
-﻿@model Core.MVC.Clean.ErrorViewModel
+﻿@* @model Core.MVC.Clean.ErrorViewModel
 @{
     ViewData["Title"] = "Error";
 }
@@ -14,7 +14,7 @@
 }
 
 @* Display the actual exception details if available *@
-@if (!string.IsNullOrEmpty(Model.ExceptionMessage))
+@* @if (!string.IsNullOrEmpty(Model.ExceptionMessage))
 {
     <div class="alert alert-danger mt-4">
         <h4>Exception Details</h4>
@@ -27,4 +27,64 @@
             <pre class="bg-dark text-light p-3 rounded" style="max-height: 300px; overflow-y: auto;"><code>@Model.ExceptionStackTrace</code></pre>
         }
     </div>
+} *@
+
+@model Core.MVC.Clean.ErrorViewModel
+
+@{
+    ViewData["Title"] = "Application Error";
 }
+
+<div class="container mt-4">
+
+    <h1 class="text-danger">
+        Application Error
+    </h1>
+
+    <hr />
+
+    <dl class="row">
+
+        <dt class="col-sm-3">
+            Request ID
+        </dt>
+        <dd class="col-sm-9">
+            <code>@Model.RequestId</code>
+        </dd>
+
+        <dt class="col-sm-3">
+            Path
+        </dt>
+        <dd class="col-sm-9">
+            <code>@Model.Path</code>
+        </dd>
+
+        <dt class="col-sm-3">
+            Exception Type
+        </dt>
+        <dd class="col-sm-9">
+            <code>@Model.ExceptionType</code>
+        </dd>
+
+        <dt class="col-sm-3">
+            Message
+        </dt>
+        <dd class="col-sm-9">
+            <pre>@Model.Message</pre>
+        </dd>
+
+    </dl>
+
+    <h3>Exception Details</h3>
+
+    <pre style="
+    white-space: pre-wrap;
+    word-break: break-word;
+    background: #f5f5f5;
+    padding: 20px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    overflow-x: auto;
+    ">@Model.Details</pre>
+
+</div>

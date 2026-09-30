@@ -1,7 +1,5 @@
 ﻿using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using System.Diagnostics;
-using Core.MVC.Clean;
 using Core.Library.Clean.AdditionalService;
 
 namespace Core.MVC.Clean.Controllers
@@ -22,27 +20,25 @@ namespace Core.MVC.Clean.Controllers
             return View();
         }
 
-        [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error(string requestId = null)
+        [HttpGet]
+        public IActionResult Error()
         {
-            var correlationId = requestId ?? HttpContext.GetCorrelationId() ?? Activity.Current?.Id ?? HttpContext.TraceIdentifier;
-            
-            var exceptionFeature = HttpContext.Features.Get<IExceptionHandlerPathFeature>();
+            var exceptionFeature =
+                HttpContext.Features.Get<IExceptionHandlerFeature>();
+
             var exception = exceptionFeature?.Error;
+
+            var path = exceptionFeature?.Path
+                       ?? HttpContext.Request.Path;
+
+            var correlationId = HttpContext.GetCorrelationId();
 
             var model = new ErrorViewModel
             {
                 RequestId = correlationId,
-                ExceptionMessage = exception?.Message,
-                ExceptionStackTrace = exception?.StackTrace
+                Path = path,
+                Exception = exception
             };
-
-            if (exception is ApiException apiException)
-            {
-                model.Message = apiException.Message;
-                model.ErrorCode = apiException.ErrorCode;
-                model.StatusCode = apiException.StatusCode;
-            }
 
             return View(model);
         }

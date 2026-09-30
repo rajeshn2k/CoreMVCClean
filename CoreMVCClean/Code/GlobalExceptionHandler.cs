@@ -1,81 +1,261 @@
 using Core.Library.Clean.AdditionalService;
+using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.Net.Http.Headers;
+using Polly.CircuitBreaker;
+using Polly.Timeout;
 
-namespace Core.MVC.Clean
+namespace Core.MVC.Clean;
+
+public sealed class GlobalExceptionHandler
 {
-    /// <summary>
-    /// Global exception handler for structured error responses
-    /// </summary>
-    public class GlobalExceptionHandler
+    private const string ErrorPath = "/Home/Error";
+    private readonly RequestDelegate _next;
+    private readonly ILogger<GlobalExceptionHandler> _logger;
+
+    public GlobalExceptionHandler(RequestDelegate next, ILogger<GlobalExceptionHandler> logger)
     {
-        private readonly RequestDelegate _next;
-        private readonly ILogger<GlobalExceptionHandler> _logger;
+        _next = next;
+        _logger = logger;
+    }
 
-        public GlobalExceptionHandler(RequestDelegate next, ILogger<GlobalExceptionHandler> logger)
+    public async Task InvokeAsync(HttpContext context)
+    {
+        try
         {
-            _next = next;
-            _logger = logger;
+            await _next(context);
+        }
+        catch (Exception ex)
+        {
+            await HandleExceptionAsync(context, ex);
+        }
+    }
+
+    private async Task HandleExceptionAsync(HttpContext context, Exception exception)
+    {
+        var correlationId = context.GetCorrelationId();
+
+        LogException(exception, correlationId);
+
+        /*
+         * If the response has already started, we cannot safely replace it.
+         */
+        if (context.Response.HasStarted)
+        {
+            _logger.LogWarning("[CorrelationId: {CorrelationId}] Response has already started. Exception cannot be handled by GlobalExceptionHandler.", correlationId);
+
+            throw exception;
         }
 
-        public async Task InvokeAsync(HttpContext context)
+        var statusCode = GetStatusCode(exception);
+
+        /*
+         * Preserve the original request information BEFORE changing
+         * Request.Path.
+         */
+        var originalPath = context.Request.Path;
+
+        /*
+         * JSON/API/AJAX request
+         */
+        if (IsJsonRequest(context))
         {
-            try
-            {
-                await _next(context);
-            }
-            catch (ApiException ex)
-            {
-                await HandleApiExceptionAsync(context, ex);
-            }
-            catch (Exception ex)
-            {
-                await HandleExceptionAsync(context, ex);
-            }
+            context.Response.Clear();
+            context.Response.StatusCode = statusCode;
+
+            await WriteJsonErrorResponseAsync(context, exception, correlationId, statusCode);
+
+            return;
         }
 
-        private async Task HandleApiExceptionAsync(HttpContext context, ApiException ex)
+        /*
+         * MVC HTML request
+         *
+         * We want to execute /Home/Error using the SAME HttpContext.
+         *
+         * Merely changing Request.Path is not enough because ASP.NET Core
+         * may still have the original BookController.Index endpoint selected.
+         */
+
+        var exceptionFeature = new ExceptionHandlerFeature
         {
-            var correlationId = context.GetCorrelationId();
-            
-            _logger.LogError(ex, 
-                "[CorrelationId: {CorrelationId}] API Error: {ErrorCode} - {Message}", 
-                correlationId, ex.ErrorCode, ex.Message);
+            Error = exception,
+            Path = originalPath
+        };
 
-            context.Response.StatusCode = ex.StatusCode;
-            
-            if (context.Request.Headers["Accept"].Contains("application/json"))
-            {
-                var errorResponse = new ApiErrorResponse
-                {
-                    Success = false,
-                    Error = new ErrorDetail
-                    {
-                        Code = ex.ErrorCode,
-                        Message = ex.Message,
-                        StatusCode = ex.StatusCode
-                    },
-                    Timestamp = DateTime.UtcNow,
-                    RequestId = correlationId,
-                    Path = context.Request.Path
-                };
+        context.Features.Set<IExceptionHandlerFeature>(exceptionFeature);
+        context.Features.Set<IExceptionHandlerPathFeature>(exceptionFeature);
 
-                context.Response.ContentType = "application/json";
-                await context.Response.WriteAsJsonAsync(errorResponse);
-            }
-            else
+        context.Response.Clear();
+
+        /*
+         * Keep the HTTP status code.
+         */
+        context.Response.StatusCode = statusCode;
+
+        /*
+         * Change the path to the error action.
+         */
+        context.Request.Path = ErrorPath;
+
+        /*
+         * IMPORTANT:
+         *
+         * Clear the route values from the original endpoint.
+         */
+        context.Request.RouteValues.Clear();
+
+        /*
+         * IMPORTANT:
+         *
+         * Tell ASP.NET Core that the current endpoint is no longer valid.
+         *
+         * This allows UseRouting() to execute routing again and select
+         * HomeController.Error instead of BookController.Index.
+         */
+        context.SetEndpoint(null);
+
+        /*
+         * Execute the remaining middleware pipeline again.
+         */
+        await _next(context);
+    }
+
+    private void LogException(
+        Exception exception,
+        string correlationId)
+    {
+        switch (exception)
+        {
+            case BrokenCircuitException:
+                _logger.LogWarning(exception, "[CorrelationId: {CorrelationId}] Polly circuit breaker is open.", correlationId);
+                break;
+
+            case TimeoutRejectedException:
+                _logger.LogWarning(exception, "[CorrelationId: {CorrelationId}] Polly timeout occurred.", correlationId);
+                break;
+
+            case ApiException apiException:
+                _logger.LogError(exception, "[CorrelationId: {CorrelationId}] API Error. Code={ErrorCode}, StatusCode={StatusCode}, Message={Message}", correlationId, apiException.ErrorCode, apiException.StatusCode, apiException.Message);
+                break;
+
+            default:
+                _logger.LogError(exception, "[CorrelationId: {CorrelationId}] Unhandled exception.", correlationId);
+                break;
+        }
+    }
+
+    private static int GetStatusCode(Exception exception)
+    {
+        return exception switch
+        {
+            ApiException apiException
+                when apiException.StatusCode >= 400 &&
+                     apiException.StatusCode <= 599
+                => apiException.StatusCode,
+
+            BrokenCircuitException
+                => StatusCodes.Status503ServiceUnavailable,
+
+            TimeoutRejectedException
+                => StatusCodes.Status503ServiceUnavailable,
+
+            HttpRequestException
+                => StatusCodes.Status502BadGateway,
+
+            TaskCanceledException
+                => StatusCodes.Status504GatewayTimeout,
+
+            _ => StatusCodes.Status500InternalServerError
+        };
+    }
+
+    private static async Task WriteJsonErrorResponseAsync(
+        HttpContext context,
+        Exception exception,
+        string correlationId,
+        int statusCode)
+    {
+        var errorCode = exception switch
+        {
+            ApiException apiException => apiException.ErrorCode,
+            BrokenCircuitException => "POLLY_CIRCUIT_OPEN",
+            TimeoutRejectedException => "POLLY_TIMEOUT",
+            HttpRequestException => "HTTP_REQUEST_ERROR",
+            TaskCanceledException => "REQUEST_TIMEOUT",
+            _ => "UNHANDLED_EXCEPTION"
+        };
+
+        var errorResponse = new ApiErrorResponse
+        {
+            Success = false,
+
+            Error = new ErrorDetail
             {
-                context.Response.Redirect($"/Home/Error?requestId={correlationId}");
-            }
+                Code = errorCode,
+
+                /*
+                 * You requested complete exception information.
+                 */
+                Message = exception.ToString(),
+
+                StatusCode = statusCode
+            },
+
+            Timestamp = DateTime.UtcNow,
+            RequestId = correlationId,
+
+            /*
+             * At this point this is still the original request path.
+             */
+            Path = context.Request.Path
+        };
+
+        context.Response.ContentType = "application/json";
+
+        await context.Response.WriteAsJsonAsync(errorResponse);
+    }
+
+    private static bool IsJsonRequest(HttpContext context)
+    {
+        var request = context.Request;
+
+        /*
+         * API route
+         */
+        if (request.Path.StartsWithSegments(
+                "/api",
+                StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
         }
 
-        private async Task HandleExceptionAsync(HttpContext context, Exception ex)
+        /*
+         * AJAX
+         */
+        if (request.Headers.TryGetValue("X-Requested-With", out var requestedWith) &&
+            string.Equals(requestedWith.ToString(), "XMLHttpRequest", StringComparison.OrdinalIgnoreCase))
         {
-            var correlationId = context.GetCorrelationId();
-            
-            _logger.LogError(ex, 
-                "[CorrelationId: {CorrelationId}] Unhandled Exception: {Message}", 
-                correlationId, ex.Message);
-
-            context.Response.Redirect($"/Home/Error?requestId={correlationId}");
+            return true;
         }
+
+        /*
+         * Request Content-Type
+         */
+        if (!string.IsNullOrWhiteSpace(request.ContentType) && request.ContentType.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        /*
+         * Accept header
+         */
+        var accept = request.Headers[HeaderNames.Accept].ToString();
+
+        if (accept.Contains("application/json", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return false;
     }
 }

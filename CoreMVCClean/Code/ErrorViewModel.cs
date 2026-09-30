@@ -2,16 +2,16 @@ namespace Core.MVC.Clean
 {
     public class ErrorViewModel
     {
-        public string? RequestId { get; set; }
-        public bool ShowRequestId => !string.IsNullOrEmpty(RequestId);
+        public string? RequestId { get; init; }
 
-        // New properties for exception details
-        public string? ExceptionMessage { get; set; }
-        public string? ExceptionStackTrace { get; set; }
-        
-        // New properties for API standardization
-        public string? Message { get; set; }
-        public string? ErrorCode { get; set; }
-        public int? StatusCode { get; set; }
+        public string? Path { get; init; }
+
+        public Exception? Exception { get; init; }
+
+        public string ExceptionType => Exception?.GetType().FullName ?? "Unknown";
+
+        public string Message => Exception?.Message ?? "No exception information available.";
+
+        public string Details => Exception?.ToString() ?? "No exception details available.";
     }
 }

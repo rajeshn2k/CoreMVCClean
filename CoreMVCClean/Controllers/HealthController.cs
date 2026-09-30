@@ -1,5 +1,4 @@
 using Microsoft.AspNetCore.Mvc;
-using Core.Library.Clean.AdditionalService.Resilience;
 
 namespace Core.MVC.Clean.Controllers
 {
@@ -7,13 +6,6 @@ namespace Core.MVC.Clean.Controllers
     [Route("api/[controller]")]
     public class HealthController : ControllerBase
     {
-        private readonly CircuitBreakerPolicyFactory _circuitBreakerFactory;
-
-        public HealthController(CircuitBreakerPolicyFactory circuitBreakerFactory)
-        {
-            _circuitBreakerFactory = circuitBreakerFactory;
-        }
-
         [HttpGet("circuit-breaker-status")]
         public IActionResult GetCircuitBreakerStatus()
         {
