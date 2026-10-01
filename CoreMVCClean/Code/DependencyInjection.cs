@@ -32,7 +32,7 @@ namespace Core.MVC.Clean
 
                     builder.AddTimeout(new TimeoutStrategyOptions
                     {
-                        Timeout = TimeSpan.Parse("00:00:30"),
+                        Timeout = TimeSpan.Parse("00:02:00"),//2 MINS
                         OnTimeout = args =>
                         {
                             logger.LogWarning("Timeout for {ServiceName}. Timeout={Timeout}", "BookAPI", args.Timeout);
