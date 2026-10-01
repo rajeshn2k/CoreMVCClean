@@ -14,27 +14,27 @@ namespace Core.MVC.Clean.Controllers
 
         public async Task<IActionResult> Index(string? search)
         {
-            var result = DatabaseInitializerBook.GetBooks();
-
-            if (!string.IsNullOrWhiteSpace(search))
-            {
-                result = result.Where(x => x.bookName.Equals(search)).ToList();
-            }
-
-            return View(result.Select(DatabaseInitializerBook.BookToBookDTO));
-
-            //IEnumerable<BookDTO> result = null;
+            //var result = DatabaseInitializerBook.GetBooks();
 
             //if (!string.IsNullOrWhiteSpace(search))
             //{
-            //    search = $"?search={Uri.EscapeDataString(search)}";
-
-            //    result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
-            //    return View(result);
+            //    result = result.Where(x => x.bookName.Equals(search)).ToList();
             //}
 
-            //result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
-            //return View(result);
+            //return View(result.Select(DatabaseInitializerBook.BookToBookDTO));
+
+            IEnumerable<BookDTO> result = null;
+
+            if (!string.IsNullOrWhiteSpace(search))
+            {
+                search = $"?search={Uri.EscapeDataString(search)}";
+
+                result = await apiClient.SearchEntitiesAsync(search, default).ConfigureAwait(true);
+                return View(result);
+            }
+
+            result = await apiClient.GetEntitiesAsync(default).ConfigureAwait(false);
+            return View(result);
         }
 
         public async Task<ActionResult> Edit(string bookId)
