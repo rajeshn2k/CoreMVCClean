@@ -47,19 +47,13 @@ namespace Core.Library.Clean.AdditionalService
                     .ReadAsStringAsync(cancellationToken)
                     .ConfigureAwait(false);
 
-                try
+                var errorResponse = JsonConvert.DeserializeObject<ApiErrorResponse>(errorContent);
+                if (errorResponse != null)
                 {
-                    var errorResponse = JsonConvert.DeserializeObject<ApiErrorResponse>(errorContent);
-                    if (errorResponse != null)
-                    {
-                        throw new ApiException(
-                            errorResponse.Error.Code,
-                            errorResponse.Error.Message,
-                            errorResponse.Error.StatusCode);
-                    }
-                }
-                catch
-                {
+                    throw new ApiException(
+                        errorResponse.Error.Code,
+                        errorResponse.Error.Message,
+                        errorResponse.Error.StatusCode);
                 }
 
                 var errorCode = response.StatusCode switch

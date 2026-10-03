@@ -30,24 +30,17 @@ namespace Core.MVC.Clean
                 {
                     var logger = context.ServiceProvider.GetRequiredService<ILogger<ResiliencePipelineBuilder>>();
 
-                    builder.AddTimeout(new TimeoutStrategyOptions
-                    {
-                        Timeout = TimeSpan.Parse("00:02:00"),//2 MINS
-                        OnTimeout = args =>
-                        {
-                            logger.LogWarning("Timeout for {ServiceName}. Timeout={Timeout}", "BookAPI", args.Timeout);
-                            return default;
-                        }
-                    });
-
                     builder.AddRetry(
                        new RetryStrategyOptions<HttpResponseMessage>
                        {
                            MaxRetryAttempts = 3,
-                           Delay = TimeSpan.Parse("00:00:02"),
+                           Delay = TimeSpan.FromSeconds(2),
                            BackoffType = DelayBackoffType.Exponential,
+                           //1. Exception test retries because its explicitly handle by HttpRequestException
+                           //2. Timeout  test retries because its explicitly handle by TimeoutRejectedException
                            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                                                .Handle<HttpRequestException>()
+                                               .Handle<TimeoutRejectedException>()
                                                .HandleResult(response =>
                                                    response.StatusCode == HttpStatusCode.RequestTimeout ||
                                                    response.StatusCode == HttpStatusCode.BadGateway ||
@@ -63,15 +56,39 @@ namespace Core.MVC.Clean
                            }
                        });
 
+                    /*
+                     * Testing HTTPClinet for Book API Request due to delibrate time out
+                     * HOW TO - API SHould take more time like 25 Secs and Polly should not wait more than 5 secons
+                     * REST Timeout to 45 Seconds for normal flow or Polly to capture exception
+                     */
+                    builder.AddTimeout(new TimeoutStrategyOptions
+                    {
+                        //Timeout = TimeSpan.Parse("00:02:00"),//45 Secs or 2 Mins etc.
+                        Timeout = TimeSpan.FromSeconds(5),//5 Secs
+                        OnTimeout = args =>
+                        {
+                            logger.LogWarning("Timeout for {ServiceName}. Timeout={Timeout}", "BookAPI", args.Timeout);
+                            return default;
+                        }
+                    });
+
+                    /*
+                     * CircuitBreakerStrategyOptions needs 3 handled failures (MinimumThroughput)
+                     * within the 10-second sampling window before opening
+                     * 3 handled failures is 100% FailureRatio 1.0 
+                     * MVC → Timeout(5s) → Retry → Timeout(5s) → Retry → Timeout(5s) → Retry → Timeout(5s) → Circuit Breaker
+                     */
                     builder.AddCircuitBreaker(
                         new CircuitBreakerStrategyOptions<HttpResponseMessage>
                         {
-                            FailureRatio = 1.0,
+                            FailureRatio = 0.5,
                             MinimumThroughput = 3,
-                            SamplingDuration = TimeSpan.FromSeconds(10),
+                            //SamplingDuration = TimeSpan.FromSeconds(10),
+                            SamplingDuration = TimeSpan.FromMinutes(1),//if span of excution is more chances of failure is more
                             BreakDuration = TimeSpan.Parse("00:00:30"),
                             ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                                     .Handle<HttpRequestException>()
+                                    .Handle<TimeoutRejectedException>()
                                     .HandleResult(response => !response.IsSuccessStatusCode),
                             OnOpened = args =>
                             {
@@ -106,7 +123,9 @@ namespace Core.MVC.Clean
 
                 // Let Polly's timeout strategy control timeout.
                 client.Timeout = Timeout.InfiniteTimeSpan;
-            })
+            });
+            //DONT CONSIDER NOT REQUIRED NOW WILL BE REMOVED THIS MODULE
+            /*
             .AddResilienceHandler("PersonAPIResilience", (builder, context) =>
             {
                 var logger = context.ServiceProvider.GetRequiredService<ILogger<ResiliencePipelineBuilder>>();
@@ -177,6 +196,7 @@ namespace Core.MVC.Clean
                         }
                     });
             });
+            */
 
             return services;
         }
