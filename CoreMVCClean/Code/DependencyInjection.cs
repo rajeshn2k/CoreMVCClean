@@ -30,6 +30,45 @@ namespace Core.MVC.Clean
                 {
                     var logger = context.ServiceProvider.GetRequiredService<ILogger<ResiliencePipelineBuilder>>();
 
+                    /*
+                     * CircuitBreakerStrategyOptions needs 3 handled failures (MinimumThroughput)
+                     * within the sampling window before opening
+                     * CircuitBreaker must be outermost to track ALL failures including retries
+                     * MVC → CircuitBreaker → Retry → Timeout → HTTP Request
+                     */
+                    builder.AddCircuitBreaker(
+                        new CircuitBreakerStrategyOptions<HttpResponseMessage>
+                        {
+                            FailureRatio = 0.5,
+                            MinimumThroughput = 3,
+                            SamplingDuration = TimeSpan.FromMinutes(1),
+                            BreakDuration = TimeSpan.Parse("00:00:30"),
+                            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                                    .Handle<HttpRequestException>()
+                                    .Handle<TimeoutRejectedException>()
+                                    .HandleResult(response => !response.IsSuccessStatusCode),
+                            OnOpened = args =>
+                            {
+                                logger.LogWarning(
+                                    "Circuit opened for {ServiceName}. BreakDuration={BreakDuration}. StatusCode={StatusCode}. Exception={Exception}",
+                                    "BookAPI", TimeSpan.Parse("00:00:30"), args.Outcome.Result?.StatusCode, args.Outcome.Exception);
+
+                                return default;
+                            },
+
+                            OnClosed = args =>
+                            {
+                                logger.LogInformation("Circuit closed for {ServiceName}", "BookAPI");
+                                return default;
+                            },
+
+                            OnHalfOpened = args =>
+                            {
+                                logger.LogInformation("Circuit half-open for {ServiceName}", "BookAPI");
+                                return default;
+                            }
+                        });
+
                     builder.AddRetry(
                        new RetryStrategyOptions<HttpResponseMessage>
                        {
@@ -60,6 +99,7 @@ namespace Core.MVC.Clean
                      * Testing HTTPClinet for Book API Request due to delibrate time out
                      * HOW TO - API SHould take more time like 25 Secs and Polly should not wait more than 5 secons
                      * REST Timeout to 45 Seconds for normal flow or Polly to capture exception
+                     * Timeout must be innermost to apply to each individual request attempt
                      */
                     builder.AddTimeout(new TimeoutStrategyOptions
                     {
@@ -71,46 +111,6 @@ namespace Core.MVC.Clean
                             return default;
                         }
                     });
-
-                    /*
-                     * CircuitBreakerStrategyOptions needs 3 handled failures (MinimumThroughput)
-                     * within the 10-second sampling window before opening
-                     * 3 handled failures is 100% FailureRatio 1.0 
-                     * MVC → Timeout(5s) → Retry → Timeout(5s) → Retry → Timeout(5s) → Retry → Timeout(5s) → Circuit Breaker
-                     */
-                    builder.AddCircuitBreaker(
-                        new CircuitBreakerStrategyOptions<HttpResponseMessage>
-                        {
-                            FailureRatio = 0.5,
-                            MinimumThroughput = 3,
-                            //SamplingDuration = TimeSpan.FromSeconds(10),
-                            SamplingDuration = TimeSpan.FromMinutes(1),//if span of excution is more chances of failure is more
-                            BreakDuration = TimeSpan.Parse("00:00:30"),
-                            ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                                    .Handle<HttpRequestException>()
-                                    .Handle<TimeoutRejectedException>()
-                                    .HandleResult(response => !response.IsSuccessStatusCode),
-                            OnOpened = args =>
-                            {
-                                logger.LogWarning(
-                                    "Circuit opened for {ServiceName}. BreakDuration={BreakDuration}. StatusCode={StatusCode}. Exception={Exception}",
-                                    "BookAPI", TimeSpan.Parse("00:00:30"), args.Outcome.Result?.StatusCode, args.Outcome.Exception);
-
-                                return default;
-                            },
-
-                            OnClosed = args =>
-                            {
-                                logger.LogInformation("Circuit closed for {ServiceName}", "BookAPI");
-                                return default;
-                            },
-
-                            OnHalfOpened = args =>
-                            {
-                                logger.LogInformation("Circuit half-open for {ServiceName}", "BookAPI");
-                                return default;
-                            }
-                        });
                 });
 
             // --------------------------------------------------
