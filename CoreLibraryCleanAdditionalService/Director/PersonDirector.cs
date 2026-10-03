@@ -19,7 +19,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = "";
 
-            using var response = await httpClient.GetAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.GetAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<IEnumerable<PersonDTO>>(response, cancellationToken);
@@ -30,7 +31,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = $"{entityId}";
 
-            using var response = await httpClient.GetAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.GetAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<PersonDTO>(response, cancellationToken);
@@ -41,7 +43,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = $"SearchByPerson/{searchValue}";
 
-            using var response = await httpClient.GetAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.GetAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<IEnumerable<PersonDTO>>(response, cancellationToken);
@@ -52,7 +55,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = $"SearchByBookId/{foreignKeyId}";
 
-            using var response = await httpClient.GetAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.GetAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<IEnumerable<PersonDTO>>(response, cancellationToken);
@@ -65,7 +69,8 @@ namespace Core.Library.Clean.AdditionalService
 
             using var content = CreateJsonContent(entity);
 
-            using var response = await httpClient.PutAsync(requestUrl, content, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.PutAsync(requestUrl, content, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<long>(response, cancellationToken);
@@ -78,7 +83,8 @@ namespace Core.Library.Clean.AdditionalService
 
             using var content = CreateJsonContent(entities);
 
-            using var response = await httpClient.PutAsync(requestUrl, content, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.PutAsync(requestUrl, content, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<long>(response, cancellationToken);
@@ -91,7 +97,8 @@ namespace Core.Library.Clean.AdditionalService
 
             using var content = CreateJsonContent(entity);
 
-            using var response = await httpClient.PostAsync(requestUrl, content, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.PostAsync(requestUrl, content, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<PersonDTO>(response, cancellationToken);
@@ -104,7 +111,8 @@ namespace Core.Library.Clean.AdditionalService
 
             using var content = CreateJsonContent(entities);
 
-            using var response = await httpClient.PostAsync(requestUrl, content, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.PostAsync(requestUrl, content, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<IEnumerable<PersonDTO>>(response, cancellationToken);
@@ -115,7 +123,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = $"{entityId}";
 
-            using var response = await httpClient.DeleteAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.DeleteAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<long>(response, cancellationToken);
@@ -126,7 +135,8 @@ namespace Core.Library.Clean.AdditionalService
             AddCorrelationIdHeader();
             var requestUrl = $"Many";
 
-            using var response = await httpClient.DeleteAsync(requestUrl, cancellationToken)
+            // Don't pass cancellationToken to HttpClient - Polly manages timeout/cancellation internally
+            using var response = await httpClient.DeleteAsync(requestUrl, CancellationToken.None)
                 .ConfigureAwait(false);
 
             return await HandleResponseAsync<long>(response, cancellationToken);
