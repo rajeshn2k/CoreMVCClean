@@ -31,17 +31,51 @@ namespace Core.MVC.Clean
                     var logger = context.ServiceProvider.GetRequiredService<ILogger<ResiliencePipelineBuilder>>();
 
                     /*
-                     * CircuitBreakerStrategyOptions needs 3 handled failures (MinimumThroughput)
-                     * within the sampling window before opening
-                     * CircuitBreaker must be outermost to track ALL failures including retries
-                     * MVC → CircuitBreaker → Retry → Timeout → HTTP Request
+                     * Retry must be outermost to retry on circuit breaker failures
+                     * Pipeline: Retry → CircuitBreaker → Timeout → HTTP Request
+                     * This allows:
+                     * - Each individual HTTP call to be tracked by CircuitBreaker
+                     * - CircuitBreaker to break on individual timeouts (not just final retry result)
+                     * - Retry to handle BrokenCircuitException if needed
+                     */
+                    builder.AddRetry(
+                       new RetryStrategyOptions<HttpResponseMessage>
+                       {
+                           MaxRetryAttempts = 3,
+                           Delay = TimeSpan.FromSeconds(2),
+                           BackoffType = DelayBackoffType.Exponential,
+                           //1. Exception test retries because its explicitly handle by HttpRequestException
+                           //2. Timeout  test retries because its explicitly handle by TimeoutRejectedException
+                           //3. CircuitBreaker failures should also be retried if desired
+                           ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
+                                               .Handle<HttpRequestException>()
+                                               .Handle<TimeoutRejectedException>()
+                                               .HandleResult(response =>
+                                                   response.StatusCode == HttpStatusCode.RequestTimeout ||
+                                                   response.StatusCode == HttpStatusCode.BadGateway ||
+                                                   response.StatusCode == HttpStatusCode.ServiceUnavailable ||
+                                                   response.StatusCode == HttpStatusCode.GatewayTimeout),
+                           OnRetry = args =>
+                           {
+                               logger.LogWarning(
+                                    "Retry {RetryAttempt} for {ServiceName}. Delay={Delay}. StatusCode={StatusCode}. Exception={Exception}",
+                                    args.AttemptNumber, "BookAPI", args.RetryDelay, args.Outcome.Result?.StatusCode, args.Outcome.Exception);
+
+                               return default;
+                           }
+                       });
+
+                    /*
+                     * CircuitBreaker tracks individual HTTP call failures (including each timeout)
+                     * With Retry outermost, CircuitBreaker sees each timeout attempt, not just final result
+                     * MVC → Retry → CircuitBreaker → Timeout → HTTP Request
                      */
                     builder.AddCircuitBreaker(
                         new CircuitBreakerStrategyOptions<HttpResponseMessage>
                         {
                             FailureRatio = 0.5,
                             MinimumThroughput = 3,
-                            SamplingDuration = TimeSpan.FromMinutes(1),
+                            SamplingDuration = TimeSpan.FromSeconds(30), // Reduced from 1 minute to 30 seconds
                             BreakDuration = TimeSpan.Parse("00:00:30"),
                             ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
                                     .Handle<HttpRequestException>()
@@ -69,35 +103,9 @@ namespace Core.MVC.Clean
                             }
                         });
 
-                    builder.AddRetry(
-                       new RetryStrategyOptions<HttpResponseMessage>
-                       {
-                           MaxRetryAttempts = 3,
-                           Delay = TimeSpan.FromSeconds(2),
-                           BackoffType = DelayBackoffType.Exponential,
-                           //1. Exception test retries because its explicitly handle by HttpRequestException
-                           //2. Timeout  test retries because its explicitly handle by TimeoutRejectedException
-                           ShouldHandle = new PredicateBuilder<HttpResponseMessage>()
-                                               .Handle<HttpRequestException>()
-                                               .Handle<TimeoutRejectedException>()
-                                               .HandleResult(response =>
-                                                   response.StatusCode == HttpStatusCode.RequestTimeout ||
-                                                   response.StatusCode == HttpStatusCode.BadGateway ||
-                                                   response.StatusCode == HttpStatusCode.ServiceUnavailable ||
-                                                   response.StatusCode == HttpStatusCode.GatewayTimeout),
-                           OnRetry = args =>
-                           {
-                               logger.LogWarning(
-                                    "Retry {RetryAttempt} for {ServiceName}. Delay={Delay}. StatusCode={StatusCode}. Exception={Exception}",
-                                    args.AttemptNumber, "BookAPI", args.RetryDelay, args.Outcome.Result?.StatusCode, args.Outcome.Exception);
-
-                               return default;
-                           }
-                       });
-
                     /*
                      * Testing HTTPClinet for Book API Request due to delibrate time out
-                     * HOW TO - API SHould take more time like 25 Secs and Polly should not wait more than 5 secons
+                     * HOW TO - API Shuld take more time like 25 Secs and Polly should not wait more than 5 secons
                      * REST Timeout to 45 Seconds for normal flow or Polly to capture exception
                      * Timeout must be innermost to apply to each individual request attempt
                      */
